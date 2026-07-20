@@ -1,0 +1,39 @@
+name: yoedu   # Tên project của docker-compose, dùng để đặt tiền tố cho container/volume khi chạy
+
+services:               # Khai báo các dịch vụ (container) sẽ chạy
+  mysql:                 # Tên service, đặt là "mysql" (dùng để các service khác gọi tới, vd: host=mysql)
+    image: mysql:8.4.10   # Dùng image MySQL phiên bản 8.4.10 từ Docker Hub
+    container_name: yoedu-mysql   # Đặt tên cụ thể cho container (thay vì tên tự sinh)
+    restart: unless-stopped        # Tự động khởi động lại container nếu nó bị crash,
+    # trừ khi mình chủ động dừng nó bằng tay
+
+    environment:                   # Các biến môi trường để cấu hình MySQL khi khởi tạo lần đầu
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}  # Mật khẩu cho user root, lấy từ file .env
+      MYSQL_DATABASE: ${MYSQL_DATABASE}            # Tên database sẽ được tự động tạo sẵn
+      MYSQL_USER: ${MYSQL_USER}                    # Tạo thêm 1 user thường (không phải root)
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}            # Mật khẩu cho user thường ở trên
+      TZ: Asia/Ho_Chi_Minh                         # Đặt múi giờ Việt Nam cho container
+
+    ports:
+      - "3307:3306"   # Map cổng: máy host cổng 3307 -> container cổng 3306 (cổng mặc định của MySQL)
+        # Nghĩa là từ máy thật, mình kết nối MySQL qua localhost:3307
+      # (đổi cổng ngoài để tránh đụng MySQL khác đang chạy sẵn ở 3306)
+
+    volumes:
+      - yoedu_mysql_data:/var/lib/mysql
+      # Gắn volume "yoedu_mysql_data" vào thư mục lưu dữ liệu thật của MySQL trong container.
+      # Nhờ vậy dữ liệu KHÔNG bị mất khi container bị xóa/tạo lại.
+
+    healthcheck:   # Cấu hình kiểm tra "sức khỏe" của container, xem MySQL đã sẵn sàng chưa
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      # Lệnh kiểm tra: dùng mysqladmin ping để hỏi MySQL còn sống không
+      # $$ là cách escape ký hiệu $ trong docker-compose (vì $ đơn dùng để nội suy biến của compose)
+      interval: 10s     # Cứ mỗi 10 giây kiểm tra 1 lần
+      timeout: 5s       # Nếu quá 5 giây không phản hồi thì coi như lần kiểm tra đó thất bại
+      retries: 10       # Thử tối đa 10 lần thất bại liên tiếp thì mới báo "unhealthy"
+      start_period: 30s # 30 giây đầu sau khi container khởi động sẽ không tính là thất bại
+      # (cho MySQL có thời gian khởi tạo dữ liệu lần đầu)
+
+volumes:              # Khai báo volume ở cấp cao nhất (named volume)
+  yoedu_mysql_data:    # Docker sẽ tự quản lý volume này, lưu ở ổ đĩa của Docker,
+  # tồn tại độc lập với vòng đời container

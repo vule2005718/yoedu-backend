@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: yoedu-backend
+    # Tên định danh của ứng dụng (hiện trong log, actuator, service discovery nếu có...)
+
+  config:
+    import: "optional:file:./.env[.properties]"
+    # Cho phép Spring đọc thêm biến từ file .env ở thư mục gốc project
+    # "optional:" nghĩa là nếu file .env không tồn tại thì bỏ qua, không báo lỗi
+    # "[.properties]" nghĩa là Spring sẽ hiểu nội dung file .env theo định dạng key=value giống .properties
+
+  datasource:   # Cấu hình kết nối tới database
+    url: "jdbc:mysql://localhost:3307/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8"
+    # Chuỗi kết nối JDBC tới MySQL:
+    # - localhost:3307 -> khớp với cổng đã map ở docker-compose (host 3307 -> container 3306)
+    # - ${MYSQL_DATABASE} -> tên database, lấy từ biến môi trường/.env
+    # - useSSL=false -> không dùng SSL(Secure Sockets Layer) khi kết nối (thường dùng cho môi trường dev/local)
+    # - allowPublicKeyRetrieval=true -> cho phép lấy public key từ server để xác thực
+    # - serverTimezone=Asia/Ho_Chi_Minh -> đồng bộ múi giờ VN giữa app và DB
+    # - characterEncoding=UTF-8 -> đảm bảo dữ liệu tiếng Việt không bị lỗi font
+    username: ${MYSQL_USER}       # Username đăng nhập DB, lấy từ biến môi trường/.env
+    password: ${MYSQL_PASSWORD}   # Password đăng nhập DB, lấy từ biến môi trường/.env
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Class driver JDBC cụ thể để Java biết cách giao tiếp với MySQL
+
+  jpa:   # Cấu hình cho JPA/Hibernate (ORM - ánh xạ Java object <-> bảng database)
+    open-in-view: false
+    # Tắt tính năng "Open Session In View"
+    # Nếu bật (true - mặc định), Hibernate session sẽ mở xuyên suốt tới khi trả response về client,
+    # dễ gây lỗi khó debug (N+1 query, connection bị giữ lâu...)
+    # Tắt đi là best practice, buộc mình phải xử lý load dữ liệu rõ ràng ở tầng Service
+
+    show-sql: true
+    # In ra câu SQL thực tế mà Hibernate sinh ra khi chạy, giúp debug dễ hơn (chỉ nên bật ở dev)
+
+    hibernate:
+      ddl-auto: validate
+      # Chiến lược Hibernate xử lý schema database:
+      # "validate" = chỉ kiểm tra schema hiện tại có khớp với entity Java không, KHÔNG tự tạo/sửa bảng
+
+    properties:
+      hibernate:
+        format_sql: true
+        # Định dạng câu SQL in ra (ở show-sql) cho dễ đọc (xuống dòng, thụt lề)
+        # thay vì in ra 1 dòng dài
+
+  flyway:   # Flyway: công cụ quản lý migration (thay đổi cấu trúc DB) theo version
+    enabled: true
+    # Bật Flyway, để nó tự động chạy các file migration khi ứng dụng khởi động
+
+    locations: classpath:db/migration
+    # Đường dẫn chứa các file migration (vd: V1__init.sql, V2__add_users.sql...)
+    # nằm trong resources/db/migration của project
