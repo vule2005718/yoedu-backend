@@ -51,3 +51,9 @@ spring:
     locations: classpath:db/migration
     # Đường dẫn chứa các file migration (vd: V1__init.sql, V2__add_users.sql...)
     # nằm trong resources/db/migration của project
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
